@@ -1,8 +1,9 @@
 " -*- vim -*-
 " vim:sts=2:sw=2:ff=unix:
 " FILE: "D:\vim\foo.vim"
-" LAST MODIFICATION: "Tue, 06 Aug 2002 09:30:33 Eastern Daylight Time ()"
-" (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.ams.org>
+" URL:  http://www.vim.org/script.php?script_id=72
+" LAST MODIFICATION: "Fri, 15 Nov 2002 14:50:55 Eastern Standard Time ()"
+" (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.AMS.org>
 
 " This file contains relatively short functions and a few commands and
 " mappings for vim.  Many of these were written in response to questions
@@ -16,11 +17,14 @@
 " (Most of my examples involve functions; some also involve maps, commands,
 " autocommands, etc.)
 
-" Most of this file was written for vim 5.x, so several things could be
+" Some of this file was written for vim 5.x, so several things could be
 " simplified with new features of vim 6.0, such as :map <local> and
 " :map <silent>.
 
 " *** Table of Contents ***
+
+" Configuration:  normally closer to the top of the file, but right after the
+" ToC in this file.
 
 " fun! DoSp(str)
 "   Purpose:  interpret special characters, such as <C-U>, in a string.
@@ -114,6 +118,55 @@
 " fun! TWIN()
 "   Purpose:  Prompt for input, and insert something in the file.
 "   Techniques:  input(), append(), :normal, switching modes.
+" vmap i"   and also i', a", and a'
+"   Purpose:  implement some new text objects.
+"   Techniques:  search offsets and some useful Visual-mode commands.
+" fun! SetPersistentString(name, value)
+" fun! SetPersistentNumber(name, value)
+"   Purpose:  Save script variables in the file, to make them persistent.
+"   Techniques:  expand(), <sfile>, search(), setline(), getline()
+
+" *** User Configuration ***
+
+" Normally, a file that (like this one) contains only a few configuration
+" items suggests that the user set them (if (s)he wants to change the
+" defaults) in the vimrc file.  The method illustrated here is appropriate for
+" complicated plugins or packages with a large number of user options.  Note
+" that the use of :runtime! allows for the usual vim rules for overriding
+" options, so the system administrator can set system defaults (overriding the
+" plugin defaults) and the user can override those with an after/ directory.
+" See :help ftplugin-overrule for details.
+"
+" This vim plugin does many amazing and wondrous things, but you may prefer to
+" change some of the defaults.  Copy the following section to a file foo.vimrc
+" in your plugin directory, normally the same directory as this file.  If your
+" system administrator has installed this file, you should install foo.vim in
+" your after/plugin/ directory so that your choices override the system
+" defaults.  See
+"   :help ftplugin-overrule
+"   :help 'runtimepath'
+" for details.
+" ==================== file foo.vimrc ====================
+" User Configuration file for foo.vim .
+let g:foo_DefineAutoCommands = 0  " default 0, do not define autocommands.
+let g:foo_DefineCommands = 1  " default 1, define ex commands.
+let g:foo_DefineAllMaps = 0  " default 0, do not define all maps.
+" The following defaults will only be used if g:foo_DefineAllMaps is set.
+" For another way to let the user specify key binfinds, see
+"   :help write-plugin
+let g:fooLNBchar = ''	" key mapping for LastNonBlank(), default '<M-4>'.
+let g:fooStripTagChar = ''  " key for StripTag(), default '<C-]>'.
+let g:fooVarTabChar = ''	" key for VarTab(), default '<Tab>'
+let g:fooMapUnderscore = 0  " default 0, do not map _ .
+let g:fooMapMouse = 0  " default 0, do not map <LeftMouse> and <RightMouse> .
+let g:fooTWINChar = ''	" key for TWIN(), default '<F4>' .
+let g:fooTextObjects = 1  " default 1, define new text objects.
+" ==================== end: foo.vimrc ====================
+
+" source the user configuration file(s):
+runtime! plugin/<sfile>:t:r.vimrc
+
+" *** End of User Configuration ***
 
 " Since I experiment a lot with this file, I want to avoid having
 " duplicate autocommands.
@@ -160,11 +213,13 @@ fun! HTMLmatch()
 endfun
 
 " Insert a header every time you begin a new class in C++ .
+if g:foo_DefineAutoCommands
 augroup Foo
   autocmd BufEnter *.cpp,*.h inoremap { {<Esc>:call ClassHeader("-")<CR>a
   autocmd BufLeave *.cpp,*.h iunmap {
   " Keep your braces balanced!}}}
 augroup END
+endif " g:foo_DefineAutoCommands
 fun! ClassHeader(leader)
   if getline(".") !~ "^\\s*class"
     return
@@ -279,10 +334,15 @@ endfun
 
 " <S-4> or $ takes you to the last character of the line; this takes you
 " to the last non-blank character of the line.
-map <M-4> 0:let@9=@/<Bar>set nohls<CR>/.*\S/e<CR>:let @/=@9<Bar>set hls<CR>
+if strlen(g:fooLNBchar)
+  execute "map" g:fooLNBchar "<Plug>fooLNB"
+elseif g:foo_DefineAllMaps && !hasmapto('<Plug>fooLNB')
+  map <M-4> <Plug>fooLNB
+endif
+map <Plug>fooLNB 0/.*\S/e<CR>:let @/=histget("/", -2)<CR>
 " Here is another way to do it.  I use a function for legibility and for the
 " sake of a local variable.
-map <M-4> :call LastNonBlank()<CR>
+map <Plug>fooLNB :call LastNonBlank()<CR>
 fun! LastNonBlank()
   let i = matchend(getline("."), '.*\S')-1
   if i > 0
@@ -293,7 +353,12 @@ fun! LastNonBlank()
 endfun
 
 " Strip off a pattern from a keyword and jump to the tag.
-nmap <C-]> :call StripTag("xxx")<CR>
+if strlen(g:fooStripTagChar)
+  execute "map" g:fooStripTagChar "<Plug>fooStripTag"
+elseif g:foo_DefineAllMaps && !hasmapto('<Plug>fooStripTag')
+  map <C-]> <Plug>fooStripTag
+endif
+nmap <Plug>fooStripTag :call StripTag("xxx")<CR>
 fun! StripTag(pattern)
   let keyword = expand("<cword>")
   if keyword =~ '^' . a:pattern
@@ -305,10 +370,12 @@ endfun
 
 " These autocommands and function insert a template every time you
 " type "<scr" at the end of a line in a *.jsp file.
+if g:foo_DefineAutoCommands
 augroup Foo
   autocmd BufEnter *.jsp imap r r<Esc>:call JS_template()<CR>a
   autocmd BufLeave *.jsp iunmap r
 augroup END
+endif " g:foo_DefineAutoCommands
 fun! JS_template()
   if getline(".") !~ '<scr$'
     return
@@ -324,10 +391,12 @@ fun! JS_template()
 endfun
 
 "The following autocommand and function align C++ style << characters.
+if g:foo_DefineAutoCommands
 augroup Foo
   autocmd BufEnter *.cpp imap < <<C-O>:call LineUpLT()<CR>
   autocmd BufLeave *.cpp iunmap <
 augroup END
+endif " g:foo_DefineAutoCommands
 fun! LineUpLT()
   if line(".") == 1 || getline(".") !~ '^\s*<<$'
     return
@@ -373,7 +442,9 @@ fun! ShowHi()
   @a
 endfun
 
-command! -nargs=1 -complete=var EditFun call EditFun(<q-args>)
+if g:foo_DefineCommands
+  command! -nargs=1 -complete=var EditFun call EditFun(<q-args>)
+endif
 fun! EditFun(name)
   " Save the value of 'more'
   let save_more = &more
@@ -449,8 +520,12 @@ fun! GetModelines(pat, ...)
 endfun
 
 " Make tab stops at columns 8, 17, 26, and 35.
-" In real life, you would want to map <Tab> instead of <F7>.
-imap <F7> <C-R>=VarTab(virtcol("."),8,17,26,35)<CR>
+if strlen(g:fooVarTabChar)
+  execute "map" g:fooVarTabChar "<Plug>fooVarTab"
+elseif g:foo_DefineAllMaps && !hasmapto('<Plug>fooVarTab')
+  map <Tab> <Plug>fooVarTab
+endif
+imap <Plug>fooVarTab <C-R>=VarTab(virtcol("."),8,17,26,35)<CR>
 fun! VarTab(c, ...)
   " Find the first tab stop after the current column.
   let i = 1
@@ -479,11 +554,13 @@ endfun
 " To avoid complications (start of line, end of line, etc.) the
 " mapping inserts a character, the function deletes all but two
 " characters, and the mapping deletes the last two.
+if g:foo_DefineAutoCommands
 augroup Foo
   autocmd BufEnter *.html,*.htm
    \ inoremap <BS> x<Esc>:call SmartBS('&[^ \t;]*;')<CR>a<BS><BS>
   autocmd BufLeave *.html,*.htm iunmap <BS>
 augroup END
+endif " g:foo_DefineAutoCommands
 fun! SmartBS(pat)
   let init = strpart(getline("."), 0, col(".")-1)
   let len = strlen(matchstr(init, a:pat . "$")) - 1
@@ -500,7 +577,9 @@ endfun
 " If the Transform() function is given the optional third argument, a string,
 " then it returns the transformed string instead of operating on the current
 " line.  Both can be given a range of lines, following the usual rules.
-command! -nargs=* -range Transform <line1>,<line2> call Transform(<f-args>)
+if g:foo_DefineCommands
+  command! -nargs=* -range Transform <line1>,<line2> call Transform(<f-args>)
+endif
 fun! Transform(old, new, ...)
   if a:0
     let string = a:1
@@ -522,7 +601,9 @@ endfun
 " :Search foo
 " will find the next occurrence of "foo" and select it in Select mode.
 " It does not work well if the match is a single character.
-command! -nargs=1 Search call Search(<f-args>)
+if g:foo_DefineCommands
+  command! -nargs=1 Search call Search(<f-args>)
+endif
 fun! Search(pat)
   execute "normal! /" . a:pat . "\<CR>"
   execute "normal! v//e+1\<CR>\<C-G>"
@@ -531,7 +612,9 @@ endfun
 " Change _foo_ into FOO on the fly, in Insert mode.
 " This version only works within one line.
 " It will not get confused if you switch bufffers before the second "_".
-:imap _ _<Esc>:call Capitalize()<CR>s
+if g:fooMapUnderscore || g:foo_DefineAllMaps
+  :imap _ _<Esc>:call Capitalize()<CR>s
+endif
 fun! Capitalize()
   if exists("b:Capitalize_flag")
     unlet b:Capitalize_flag
@@ -544,24 +627,30 @@ endfun
 
 " If you switch between windows with the mouse, and want each window to
 " remember whether it was in Insert or Normal mode, try this:
-inoremap <LeftMouse> <Esc>:let w:lastmode="Insert"<CR><LeftMouse>
-        \ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
-        \ startinsert<Bar>endif<CR>
-nnoremap <LeftMouse> :let w:lastmode="Normal"<CR><LeftMouse>
-        \ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
-        \ startinsert<Bar>endif<CR>
+if g:fooMapMouse || g:foo_DefineAllMaps
+  inoremap <LeftMouse> <Esc>:let w:lastmode="Insert"<CR><LeftMouse>
+	\ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
+	\ startinsert<Bar>endif<CR>
+  nnoremap <LeftMouse> :let w:lastmode="Normal"<CR><LeftMouse>
+	\ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
+	\ startinsert<Bar>endif<CR>
+endif
 
 " Echo a command and then execute it.  This is useful for making a record
 " of your vim session (the Command-line portion) with
 " :redir > vimlog.txt .
-command! -nargs=* Echo echo ":".<q-args> <bar> <args>
+if g:foo_DefineCommands
+  command! -nargs=* Echo echo ":".<q-args> <bar> <args>
+endif
 
 " Use getchar() to eat up the space that triggers an abbreviation.  (This
 " requires vim 6.x .)  If you want to type "foo " and get "foo()" with the
 " cursor between the parentheses, use the following command and enter
 " :Iab <silent> foo foo()<Left>
 
-command! -nargs=+ Iabbr execute "iabbr" <q-args> . "<C-R>=Eatchar('\\s')<CR>"
+if g:foo_DefineCommands
+  command! -nargs=+ Iabbr execute "iabbr" <q-args> . "<C-R>=Eatchar('\\s')<CR>"
+endif
 
 " The built-in getchar() function returns a Number for an 8-bit character, and
 " a String for any other character.  This version always returns a String.
@@ -640,7 +729,12 @@ fun! Common(str1, str2)
   return strpart(a:str1, 0, n)
 endfun
 
-:inoremap <F4> <C-O>:call TWIN()<CR>
+if strlen(g:fooTWINChar)
+  execute "map" g:fooTWINChar "<Plug>fooTWIN"
+elseif g:foo_DefineAllMaps && !hasmapto('<Plug>fooTWIN')
+  map <F4> <Plug>fooTWIN
+endif
+:inoremap <Plug>fooTWIN <C-O>:call TWIN()<CR>
 fun! TWIN()
   let str = "I hear that the weather is nice in "
   let str = str . input("Where do you want to go today?  ")
@@ -648,3 +742,47 @@ fun! TWIN()
   call append(".", str)
   +normal! gqq$
 endfun
+
+" Some mappings to implement new text objects; only Visual mode is possible,
+" as far as I can tell.
+if g:fooTextObjects || g:foo_DefineAllMaps
+  vmap i" ?"?e+1<CR>o/"/s-1<CR><Esc>:noh<CR>gv
+  vmap i' ?'?e+1<CR>o/'/s-1<CR><Esc>:noh<CR>gv
+  vmap a" ?"<CR>o/"<CR><Esc>:noh<CR>gv
+  vmap a' ?'<CR>o/'<CR><Esc>:noh<CR>gv
+endif
+
+" Use the current file to store persistent variables.  Return 1 if not found.
+" See example after the functions have been defined.
+fun! SetPersistentNumber(name, value)
+  " Search, from end of file, for "let name = ..."
+  $
+  if !search('^\s*let\s\+s:' . a:name . '\s\+=', 'bW')
+    return 1
+  endif
+  execute 's/=.*/=' a:value
+endfun
+fun! SetPersistentString(name, value)
+  " Search, from end of file, for "let name = ..."
+  $
+  if !search('^\s*let\s\+s:' . a:name . '\s\+=', 'bW')
+    return 1
+  endif
+  let newline = matchstr(getline("."), '.\{-}=\s*')
+  " If a:value = "a'b\c" then we want :let name = 'a' . "'" . 'b\c'
+  let newline = newline."'" . substitute(a:value, "'", "'.\"'\".'", "g") . "'"
+  call setline(".", newline)
+endfun
+" Example:  the full path of this file and the number of times it has been
+" sourced.
+let s:fooFile = expand("<sfile>:p")
+if filewritable(s:fooFile)
+  let s:filePosition = Mark()
+  call SetPersistentString("fullPath", s:fooFile)
+  call SetPersistentNumber("sourceCount", s:sourceCount+1)
+  update
+  execute s:filePosition
+endif
+let s:fullPath = 'D:\vim\foo.vim'
+let s:sourceCount = 15
+
