@@ -1,0 +1,8 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=72
+
+This file is a collection of Vim functions I have written, many of them in
+response to questions posted on the vim users' list.  They are all reasonably
+short, so I hope they will be good examples if you are trying to learn how to
+write your own Vim functions.  You may even find some of the functions
+useful, such as the :Range command and the Mark(), Common(), Count(),
+GetModelines(), VarTab(), and SmartBS() functions.
