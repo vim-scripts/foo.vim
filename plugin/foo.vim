@@ -1,3 +1,11 @@
+" -*- vim -*-
+" vim:sts=2:sw=2
+" FILE: "D:\vim\foo.vim"
+" UPLOAD: URL="ftp://siteftp.netscape.net/vim/foobar.vim" USER="BBenjiF"
+" LAST MODIFICATION: "Wed, 21 Nov 2001 15:14:54 Eastern Standard Time ()"
+" (C) 2000 by Benji Fisher, <benji@member.ams.org>
+" $Id:$
+
 " This file contains relatively short functions and a few commands and
 " mappings for vim.  Many of these were written in response to questions
 " posted on the vim mailing list.  As a result (if I do say so myself)
@@ -336,14 +344,15 @@ fun! GetModelines(pat, ...)
   if !exists("start") || start < 1
     let start = 1
   endif
-  if !exists("finish") || finish > line(">")
+  if !exists("finish") || finish > EOF
     let finish = EOF
   endif
   " Now for the fun part!  Remember that any command can be used after
   " :g/pat/ although :s is the most common.  Since I am using "/" to
   " delimit the :g command, I have to escape them in a:pat.
   let n = 0
-  execute "g/" . escape(a:pat, "/") . "/let n=line('.')"
+  silent execute start .",". finish
+	\ 'g/' . escape(a:pat, "/") . "/let n=line('.')"
   " Now, some substitute() magic:  I enclose the pattern in a \(group\),
   " in case it contains branches, and add .\{-} and .* at the beginning
   " and end, so it matches the whole line.  Since \(pat\) is the first
@@ -427,3 +436,35 @@ fun! Transform(old, new, ...)
     call setline(".", string)
   endif
 endfun
+
+" :Search foo
+" will find the next occurrence of "foo" and select it in Select mode.
+" It does not work well if the match is a single character.
+command! -nargs=1 Search call Search(<f-args>)
+
+fun! Search(pat)
+  execute "normal! /" . a:pat . "\<CR>"
+  execute "normal! v//e+1\<CR>\<C-G>"
+endfun
+
+" Change _foo_ into _FOO_ on the fly, in Insert mode.
+:imap _ _<Esc>:call Capitalize()<CR>s
+
+fun! Capitalize()
+  if exists("b:Capitalize_flag")
+    unlet b:Capitalize_flag
+    normal! vF_Ux,
+  else
+    let b:Capitalize_flag = 1
+    execute "normal! a_\<Esc>"
+  endif
+endfun
+
+" If you switch between windows with the mouse, and want each window to
+" remember whether it was in Insert or Normal mode, try this:
+inoremap <LeftMouse> <Esc>:let w:lastmode="Insert"<CR><LeftMouse>
+        \ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
+        \ startinsert<Bar>endif<CR>
+nnoremap <LeftMouse> :let w:lastmode="Normal"<CR><LeftMouse>
+        \ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
+        \ startinsert<Bar>endif<CR>
