@@ -1,7 +1,7 @@
 " -*- vim -*-
-" vim:sts=2:sw=2
+" vim:sts=2:sw=2:ff=unix:
 " FILE: "D:\vim\foo.vim"
-" LAST MODIFICATION: "Sun, 04 Aug 2002 23:25:13 Eastern Daylight Time ()"
+" LAST MODIFICATION: "Tue, 06 Aug 2002 09:30:33 Eastern Daylight Time ()"
 " (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.ams.org>
 
 " This file contains relatively short functions and a few commands and
