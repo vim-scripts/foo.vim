@@ -1,10 +1,8 @@
 " -*- vim -*-
 " vim:sts=2:sw=2
 " FILE: "D:\vim\foo.vim"
-" UPLOAD: URL="ftp://siteftp.netscape.net/vim/foobar.vim" USER="BBenjiF"
-" LAST MODIFICATION: "Thu, 06 Dec 2001 11:53:32 Eastern Standard Time ()"
-" (C) 2000 by Benji Fisher, <benji@member.ams.org>
-" $Id:$
+" LAST MODIFICATION: "Sun, 31 Mar 2002 12:34:45 Eastern Standard Time ()"
+" (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.ams.org>
 
 " This file contains relatively short functions and a few commands and
 " mappings for vim.  Many of these were written in response to questions
@@ -92,6 +90,14 @@
 " inoremap <LeftMouse>
 "   Purpose:  Keep mode (Insert or Normal) attached to a window.
 "   Techniques:  window variables, Command mode inside a mapping
+" command! Echo
+"   Purpose:  Echo a command, then execute it.  Useful for making a log of
+"   your Command-mode session.
+" command! Iabbr
+"   Purpose:  Define an Insert-mode abbreviation that "eats" the space that
+"   triggers it.
+" fun! Eatchar(pat)
+"   Purpose:  This is a helper function for :Iabbr .
 
 " Since I experiment a lot with this file, I want to avoid having
 " duplicate autocommands.
@@ -528,3 +534,24 @@ inoremap <LeftMouse> <Esc>:let w:lastmode="Insert"<CR><LeftMouse>
 nnoremap <LeftMouse> :let w:lastmode="Normal"<CR><LeftMouse>
         \ :if exists("w:lastmode")&&w:lastmode=="Insert"<Bar>
         \ startinsert<Bar>endif<CR>
+
+" Echo a command and then execute it.  This is useful for making a record
+" of your vim session (the Command-line portion) with
+" :redir > vimlog.txt .
+command! -nargs=* Echo echo ":".<q-args> <bar> <args>
+
+" Use getchar() to eat up the space that triggers an abbreviation.  (This
+" requires vim 6.x .)  If you want to type "foo " and get "foo()" with the
+" cursor between the parentheses, use the following command and enter
+" :Iab <silent> foo foo()<Left>
+
+command! -nargs=+ Iabbr execute "iabbr" <q-args> . "<C-R>=Eatchar('\\s')<CR>"
+
+fun! Eatchar(pat)
+   let c = getchar()
+   if c != 0
+     let c = nr2char(c)
+   endif
+   return (c =~ a:pat) ? '' : c
+endfun
+
