@@ -1,8 +1,8 @@
 " -*- vim -*-
 " vim:sts=2:sw=2:ff=unix:
-" FILE: "D:\vim\foo.vim"
+" FILE: "/home/benji/.vim/plugin/foo.vim"
 " URL:  http://www.vim.org/script.php?script_id=72
-" LAST MODIFICATION: "June 27, 2003"
+" LAST MODIFICATION: "January 12, 2004"
 " (C) 2000, 2001, 2002, 2003 by Benji Fisher, <benji@member.AMS.org>
 
 " This file contains relatively short functions and a few commands and
@@ -84,7 +84,7 @@
 "   Techniques:  Insert-mode mapping that works at start, middle, end of line
 " fun! Transform(old, new, ...)
 "   Purpose:  Perform multiple simple substitutions.
-"   Transform:  :while loop, getline() and setline()
+"   Techniques:  :while loop, getline() and setline()
 " fun! Search(pat)
 "   Purpose:  Search for a pattern and select it in Select mode.
 "   Techniques:  :command, :execute, mode switching
@@ -125,6 +125,19 @@
 " fun! SetPersistentNumber(name, value)
 "   Purpose:  Save script variables in the file, to make them persistent.
 "   Techniques:  expand(), <sfile>, search(), setline(), getline()
+" fun! GCD(a, b)
+"   Techniques:  An example of a recursive algorithm.
+" function! RepeatString(count, ...)
+"   Purpose:  Repeat the optional argument to get a string of length a:count . 
+" function! InvertString(str)
+"   Courtesy of Preben "Peppe" Guldberg
+"   Techniques:  It can be used with :s/.../\= . 
+" function! MyMarks(action)
+"   Purpose:  Store and read marks in a special file.
+"   Techniques:  getline(), setline(), search(), ...
+" function! s:SID()
+" function! FooSID()
+"   Purpose:  implement a hack to expose the script ID.
 
 " *** User Configuration ***
 
@@ -152,7 +165,7 @@ let g:foo_DefineAutoCommands = 0  " default 0, do not define autocommands.
 let g:foo_DefineCommands = 1  " default 1, define ex commands.
 let g:foo_DefineAllMaps = 0  " default 0, do not define all maps.
 " The following defaults will only be used if g:foo_DefineAllMaps is set.
-" For another way to let the user specify key binfinds, see
+" For another way to let the user specify key bindings, see
 "   :help write-plugin
 let g:fooLNBchar = ''	" key mapping for LastNonBlank(), default '<M-4>'.
 let g:fooStripTagChar = ''  " key for StripTag(), default '<C-]>'.
@@ -781,7 +794,7 @@ endfun
 " sourced.
 let s:fooFile = expand("<sfile>:p")
 let s:fullPath = '/home/benji/.vim/plugin/foo.vim'
-let s:sourceCount = 92
+let s:sourceCount = 109
 if filewritable(s:fooFile)
   let s:filePosition = Mark()
   call SetPersistentString("fullPath", s:fooFile)
@@ -789,6 +802,7 @@ if filewritable(s:fooFile)
   update
   execute s:filePosition
 endif
+command! FooCount echo "FooCount =" s:sourceCount
 
 " An example of a recursive algorithm.  GCD(4,6) should return 2.
 " Do not feed in negative numbers.
@@ -800,50 +814,96 @@ fun! GCD(a, b)
   endif
 endfun
 
-command! -register Bar echo "The register is <reg>"
-nmap \B :Bar<CR>
+" A silly exercise in efficientcy.  Instead of building it up one copy at a
+" time, double the string repeatedly and then truncate.
+" Usage:  :echo RepeatString(68, '1 + ') . '0 = 17'
+function! RepeatString(count, ...)
+  " Initialize str to a:1, default to "-" .
+  let str = (a:0 ? a:1 : "-")
+  let len = strlen(str)
+  while len < a:count
+    let str = str . str
+    let len = len + len
+  endwhile
+  return strpart(str, 0, a:count)
+endfunction
 
-fun! EchoCount()
-  echo v:count
-endfun
-nmap \F :<C-U>call EchoCount()<CR>
+function! InvertString(str)
+    " Courtesy of Preben "Peppe" Guldberg
+    " This will invert/reverse a string
+    " This will work on arbitrary length strings, too. The /.*/ should be
+    " quick, which might make it up for using a regex rather than using
+    " numerous commands in a :while loop.
+    "
+    " This can be used in a substitute command as follows:
+    " :%s/AUTHORIZATION/\=InvertString(submatch(0))
+    let inverted = substitute(a:str, '.\(.*\)\@=',
+                \ '\=a:str[strlen(submatch(1))]', 'g')
+    return inverted
+endfunction
 
-fun! Foo()
-  put='\" A comment line ... '
-  s/$/1»/
-  execute "s/$/2\xbb/"
-  call setline(".", getline(".") . "3\xbb")
-  execute "normal! A4\<C-K>>>\<Esc>"
-endfun
-" A comment line ... 1»2»3»4»
-
-command! FooCount echo "FooCount =" s:sourceCount
-
-fun! Foo(...)
-    if a:0 == 0 || a:1 == ""
-        let name = input('Whats your name?', 'bozo')
+" This function stores and reads marks in a special file, in the format
+"   File:/home/benji/.vim/plugin/foo.vim
+"   Mark:normal!890Gzt898G5|
+" To read a mark, it finds the appropriate "File:" line, extracts everything
+" after the "Mark:" in the next line, and :execute's it.  The "Mark:" line
+" uses the same format as the Mark() function in this file.
+" Usage:
+"   :call MyMarks("write")
+"   :call MyMarks("read")
+"   :call MyMarks("delete")
+" To use this automatically with all *.txt files in path/ , you can use
+" autocommands such as
+" augroup MyMarks
+"   au! BufReadPost path/*.txt call MyMarks("read")
+"   au! BufWritePre path/*.txt call MyMarks("write")
+" augroup END 
+" Limitations:  There is no error checking, so if the marks file is corrupted,
+" you will get strange errors.  Beware of Trojan-horse marks files!
+" The function uses a :split and :quit, so it may mess up your window layout. 
+function! MyMarks(action)
+  " Get the full path to the current file and a mark for the current position.
+  let file = expand("%:p")
+  let mark = Mark()
+  " Go to the marks file and look for an entry for the file.
+  split $HOME/MyMarks.txt
+  " Using '\V' at the start of the pattern, the only special character in the
+  " file name that might cause trouble is '\', so escape it.
+  let markline = search('\V\^File:' . escape(file, '\') . '\$', 'w')
+  if a:action ==? "read" && markline
+    " Extract the mark, quit the marks file, and execute.
+    let mark = getline(markline + 1)
+    let mark = substitute(mark, 'Mark:', '', '')
+    quit
+    execute mark
+  elseif a:action ==? "write"
+    " Add an entry, or modify the existing one, for this file.
+    if markline
+      call setline(markline + 1, 'Mark:' . mark)
     else
-        let name = a:1
+      " Since setline("$+1",...) does not work, add a blank line at EOF.
+      $put=''
+      call setline("$", 'File:' . file)
+      $put=''
+      call setline("$", 'Mark:' . mark)
     endif
-    return 'Your name is '.name
-endfun
-
-inoremap <F3>       <C-r>=Foo()<CR>
-nnoremap <F3>       i<C-r>=Foo()<CR>
-inoremenu Help.foo      <C-r>=Foo()<CR>
-nnoremenu Help.foo      i<C-r>=Foo()<CR>
-
-com! -nargs=?  FooCom let s:FooVal = Foo(<q-args>) <Bar> normal! i<C-r>=s:FooVal<CR>
-
-scriptencoding latin1
-let fooChar = "«"
-let barChar = "\xab"
-
-command! -bang -nargs=* EditOrFind echo EditOrFind(<q-bang>, <q-args>)
-fun! EditOrFind(bang, fname)
-  if a:fname == ""
-    return "edit" . a:bang
-  else
-    return "find" . a:bang . " " . a:fname
+    write
+    quit
+  elseif a:action ==? "delete" && markline
+    " Remove both the "File:" line and the "Mark:" line.
+    .,+delete
+    write
+    quit
   endif
-endfun
+endfunction
+
+" The following two functions implement a hack to expose the script ID.
+" Usage:  :echo {FooSID()}Fun() if s:Fun() is defined in this file.
+function! s:SID()
+  let fullname = expand("<sfile>")
+  " this looks like "function FooSID..<SNR>38_SID" if called from FooSID().
+  return matchstr(fullname, '<SNR>\d\+_') 
+endfunction
+function! FooSID()
+  return s:SID()
+endfunction
