@@ -2,7 +2,7 @@
 " vim:sts=2:sw=2
 " FILE: "D:\vim\foo.vim"
 " UPLOAD: URL="ftp://siteftp.netscape.net/vim/foobar.vim" USER="BBenjiF"
-" LAST MODIFICATION: "Wed, 21 Nov 2001 15:14:54 Eastern Standard Time ()"
+" LAST MODIFICATION: "Thu, 06 Dec 2001 11:53:32 Eastern Standard Time ()"
 " (C) 2000 by Benji Fisher, <benji@member.ams.org>
 " $Id:$
 
@@ -10,6 +10,88 @@
 " mappings for vim.  Many of these were written in response to questions
 " posted on the vim mailing list.  As a result (if I do say so myself)
 " there are a lot of clever ideas in this file.
+"
+" The examples are organized chronologically, which means that the ones near
+" the beginning are not necessarily the best ones to start with.  I hope the
+" following table of contents will help.  If you see something that looks
+" interesting, position the cursor on the function name and use the * command.
+" (Most of my examples involve functions; some also involve maps, commands,
+" autocommands, etc.)
+
+" Most of this file was written for vim 5.x, so several things could be
+" simplified with new features of vim 6.0, such as :map <local> and
+" :map <silent>.
+
+" *** Table of Contents ***
+
+" fun! DoSp(str)
+"   Purpose:  interpret special characters, such as <C-U>, in a string.
+"   Techniques:  argument syntax, substitute() function
+" fun! EvalInput(string)
+"   Purpose:  Same as DoSp()
+"   Techniques:  scratch buffer, :normal with control characters, @"
+" fun! HTMLmatch()
+"   Purpose:  Find matching HTML tags (baby version of matchit.vim)
+"   Techniques:  :if ... :endif, character under the cursor
+" fun! ClassHeader(leader)
+"   Purpose:  Insert a fancy comment line whenever a C++ class is started.
+"   Techniques:  :autocmd, :imap, :normal with control characters
+" command! -nargs=* Line
+" command! -nargs=* Range
+"   Purpose:  Use one or two variables to give a line or range to a command.
+"   Techniques:  :command, <q-args>, substitute(), :execute
+" fun! Mark(...)
+" fun! Line(mark)
+" fun! Virtcol(mark)
+"   Purpose:  Use (local) variables to store marks, restore cursor and screen.
+"   Techniques:  variable number of arguments, parsing with =~, substitute()
+" fun! Pippo(...) range
+"   Purpose:  Append words matching a given pattern to a file.
+"   Techniques:  :function with a range, variable number of arguments, :copy
+" fun! LastNonBlank()
+"   Purpose:  Move the cursor to the last non-blank on the line; ^ in reverse.
+"   Techniques:  matchend(), positioning the cursor with :normal
+" fun! StripTag(pattern)
+"   Purpose:  Tag search on "foo" if the current word is "xxxfoo".
+"   Techniques:  expand(), <cword>, =~, :normal with control characters
+" fun! JS_template()
+"   Purpose:  Insert a JavaScript template at the magic string "<scr"
+"   Techniques:  :autocmd, mode switching, :append
+" fun! LineUpLT()
+"   Purpose:  Automatically align C++ << operators.
+"   Techniques:  :autocmd, mode switching, manually adjusting indent
+" fun! Count(pat)
+"   Purpose:  Count the number of lines matching the input pattern.
+"   Techniques:  :g, returning a value, :execute
+" fun! ShowHi()
+"   Purpose:  Show the colors of all highlight groups.
+"	Oops, we reinvented the wheel!  See $VIMRUNTIME/hitest.vim .
+"   Techniques:  saving and restoring an option, scratch buffer, :redir, etc.
+" fun! EditFun(name)
+"   Purpose:  Edit a vim function in a scratch buffer.
+"   Techniques:  pretty much the same as ShowHi()
+" fun! GetModelines(pat, ...)
+"   Purpose:  Get information stored in comments (modelines) in the buffer.
+"   Techniques:  variable number of arguments, :silent (vim 6.0), complex :g
+" fun! VarTab(c, ...)
+"   Purpose:  Define tab stops at arbitrarily spaced columns.
+"   Techniques:  getting the value of a function without leaving Insert mode,
+"     looping over variable number of arguments
+" fun! SmartBS(pat)
+"   Purpose:  Delete HTML constructs like "&foo;" as a single character.
+"   Techniques:  Insert-mode mapping that works at start, middle, end of line
+" fun! Transform(old, new, ...)
+"   Purpose:  Perform multiple simple substitutions.
+"   Transform:  :while loop, getline() and setline()
+" fun! Search(pat)
+"   Purpose:  Search for a pattern and slect it in Select mode.
+"   Techniques:  :command, :execute, mode switching
+" fun! Capitalize()
+"   Purpose:  Make "_" act like a Caps Lock key in Insert mode.
+"   Techniques:  store a flag as a buffer variable, mode switching
+" inoremap <LeftMouse>
+"   Purpose:  Keep mode (Insert or Normal) attached to a window.
+"   Techniques:  window variables, Command mode inside a mapping
 
 " Since I experiment a lot with this file, I want to avoid having
 " duplicate autocommands.
@@ -55,14 +137,12 @@ fun! HTMLmatch()
   endif
 endfun
 
+" Insert a header every time you begin a new class in C++ .
 augroup Foo
   autocmd BufEnter *.cpp,*.h inoremap { {<Esc>:call ClassHeader("-")<CR>a
   autocmd BufLeave *.cpp,*.h iunmap {
   " Keep your braces balanced!}}}
 augroup END
-
-" With the above autocommands, this will insert a header every time you
-" begin a new class in C++ .
 fun! ClassHeader(leader)
   if getline(".") !~ "^\\s*class"
     return
@@ -107,8 +187,8 @@ command! -nargs=* Range
 	\ | execute Range_range . substitute(<q-args>, '\S\+\s\+\S\+', "", "")
 	\ | unlet Range_range
 
-" Usage:  let ma = Mark() ... execute ma
-" has the same effect as  normal ma ... normal 'a
+" Usage:  :let ma = Mark() ... execute ma
+" has the same effect as  :normal ma ... :normal 'a
 " without affecting global marks.
 " You can also use Mark(17) to refer to the start of line 17 and Mark(17,34)
 " to refer to the 34'th (screen) column of the line 17.  The functions
@@ -148,19 +228,6 @@ fun! Virtcol(mark)
   endif
 endfun
 
-" This function can be used to trash your search history in vim 5.6.
-" Just call it twice in a row, with the help of the map below.  This
-" bug should be fixed in the next release of vim.
-fun! Foo()
-  let n = histnr("/")
-  /qwertyuiop
-  if histnr("/") > n
-    call histdel("/", -1)
-  endif
-endfun
-map <F4> :call Foo()<CR>
-map <F5> :history /<CR>
-
 " Usage:  If the file contains lines like
 " let pippo1 = pippo12
 " I like pippo2
@@ -187,15 +254,6 @@ fun! Pippo(...) range
   execute (bot+1) . ',$v/' . pat . '/d'
   execute (bot+1) . ',$s/.\{-}\(' . pat . '\)$/\1/e'
 endfun
-
-" First line:  Stefan Roemer's idea (seems to work better than my idea, line 2.)
-" If it works right then hitting <F4> does not make ":call CommandlineClear()"
-" appear on the command line.
-fun! CommandlineClear()
-  let ch_save = &ch | let &ch = 0 | let &ch = ch_save
-  echo strpart("\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r\r", 0, &ch)
-endfun
-map <F4> :call CommandlineClear()<CR>
 
 " <S-4> or $ takes you to the last character of the line; this takes you
 " to the last non-blank character of the line.
@@ -248,7 +306,6 @@ augroup Foo
   autocmd BufEnter *.cpp imap < <<C-O>:call LineUpLT()<CR>
   autocmd BufLeave *.cpp iunmap <
 augroup END
-
 fun! LineUpLT()
   if line(".") == 1 || getline(".") !~ '^\s*<<$'
     return
@@ -276,11 +333,12 @@ fun! ShowHi()
   " Save the value of 'more'
   let save_more = &more
   " Spare me the "more" prompts!
-  :set nomore
+  set nomore
   " Redirect output of :hi to register a
   redir @a
   hi
   redir END
+  let &more = save_more
   new
   " Put it in a temp buffer
   put a
@@ -298,11 +356,12 @@ fun! EditFun(name)
   " Save the value of 'more'
   let save_more = &more
   " Spare me the "more" prompts!
-  :set nomore
-  " Redirect output of :hi to register a
+  set nomore
+  " Redirect output of :function to register a
   redir @a
   execute "function " . a:name
   redir END
+  let &more = save_more
   " Put it in a temp buffer
   execute "sp " . tempname()
   put a
@@ -351,6 +410,7 @@ fun! GetModelines(pat, ...)
   " :g/pat/ although :s is the most common.  Since I am using "/" to
   " delimit the :g command, I have to escape them in a:pat.
   let n = 0
+  " The :silent command requires vim 6.0.
   silent execute start .",". finish
 	\ 'g/' . escape(a:pat, "/") . "/let n=line('.')"
   " Now, some substitute() magic:  I enclose the pattern in a \(group\),
@@ -369,8 +429,8 @@ endfun
 " Make tab stops at columns 8, 17, 26, and 35.
 " In real life, you would want to map <Tab> instead of <F7>.
 imap <F7> <C-R>=VarTab(virtcol("."),8,17,26,35)<CR>
-
 fun! VarTab(c, ...)
+  " Find the first tab stop after the current column.
   let i = 1
   while i <= a:0
     execute "let num_sp = -a:c + a:" . i
@@ -379,9 +439,11 @@ fun! VarTab(c, ...)
     endif
     let i = i+1
   endwhile
-  if i > a:0
+  if i > a:0  " We are already past the last tab stop.
     return ""
   endif
+  " This may be overkill, but I want an efficient way to generate a string
+  " with the right number of spaces.
   let spaces = " "
   let len = 1
   while len < num_sp
@@ -400,7 +462,6 @@ augroup Foo
    \ inoremap <BS> x<Esc>:call SmartBS('&[^ \t;]*;')<CR>a<BS><BS>
   autocmd BufLeave *.html,*.htm iunmap <BS>
 augroup END
-
 fun! SmartBS(pat)
   let init = strpart(getline("."), 0, col(".")-1)
   let len = strlen(matchstr(init, a:pat . "$")) - 1
@@ -412,13 +473,12 @@ endfun
 " If you have the line
 "	foobar
 " and call :Transform abc xyz
-" then the "a" and "b" in "foobar" are teanslated into "x" and "y", to give
+" then the "a" and "b" in "foobar" are translated into "x" and "y", to give
 "	fooyxr
 " If the Transform() function is given the optional third argument, a string,
 " then it returns the transformed string instead of operating on the current
 " line.  Both can be given a range of lines, following the usual rules.
 command! -nargs=* -range Transform <line1>,<line2> call Transform(<f-args>)
-
 fun! Transform(old, new, ...)
   if a:0
     let string = a:1
@@ -441,15 +501,15 @@ endfun
 " will find the next occurrence of "foo" and select it in Select mode.
 " It does not work well if the match is a single character.
 command! -nargs=1 Search call Search(<f-args>)
-
 fun! Search(pat)
   execute "normal! /" . a:pat . "\<CR>"
   execute "normal! v//e+1\<CR>\<C-G>"
 endfun
 
-" Change _foo_ into _FOO_ on the fly, in Insert mode.
+" Change _foo_ into FOO on the fly, in Insert mode.
+" This version only works within one line.
+" It will not get confused if you switch bufffers before the second "_".
 :imap _ _<Esc>:call Capitalize()<CR>s
-
 fun! Capitalize()
   if exists("b:Capitalize_flag")
     unlet b:Capitalize_flag
