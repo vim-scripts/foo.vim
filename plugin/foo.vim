@@ -1,7 +1,7 @@
 " -*- vim -*-
 " vim:sts=2:sw=2
 " FILE: "D:\vim\foo.vim"
-" LAST MODIFICATION: "Sun, 31 Mar 2002 12:34:45 Eastern Standard Time ()"
+" LAST MODIFICATION: "Sun, 04 Aug 2002 23:25:13 Eastern Daylight Time ()"
 " (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.ams.org>
 
 " This file contains relatively short functions and a few commands and
@@ -96,8 +96,24 @@
 " command! Iabbr
 "   Purpose:  Define an Insert-mode abbreviation that "eats" the space that
 "   triggers it.
+" fun! Getchar()
+"   Purpose:  like getchar() but always return a String.  Used by
+"   Eatchar() and GetMotion().
+"   Techniques:  getchar(), nr2char()
 " fun! Eatchar(pat)
 "   Purpose:  This is a helper function for :Iabbr .
+" fun! Yank()
+"   Purpose:  Example for using GetMotion() to remap an operator.
+" fun! GetMotion(char)
+"   Purpose:  Capture a sequence of characters that define a motion.  This is
+"   useful when redefining operators, such as y (yank).
+"   Techniques:  getchar(), while
+" fun! Common(str1, str2)
+"   Purpose:  Return the common initial part of two strings.
+"   Techniques:  matchend(), strpart(), while
+" fun! TWIN()
+"   Purpose:  Prompt for input, and insert something in the file.
+"   Techniques:  input(), append(), :normal, switching modes.
 
 " Since I experiment a lot with this file, I want to avoid having
 " duplicate autocommands.
@@ -547,11 +563,88 @@ command! -nargs=* Echo echo ":".<q-args> <bar> <args>
 
 command! -nargs=+ Iabbr execute "iabbr" <q-args> . "<C-R>=Eatchar('\\s')<CR>"
 
+" The built-in getchar() function returns a Number for an 8-bit character, and
+" a String for any other character.  This version always returns a String.
+fun! Getchar()
+  let c = getchar()
+  if c != 0
+    let c = nr2char(c)
+  endif
+  return c
+endfun
+
 fun! Eatchar(pat)
-   let c = getchar()
-   if c != 0
-     let c = nr2char(c)
-   endif
+   let c = Getchar()
    return (c =~ a:pat) ? '' : c
 endfun
 
+" If you want to remap an operator, use GetMotion() to supply the motion that
+" follows the operator.  For example,
+"
+" nmap <silent> y :call Yank()<CR>
+"
+" will redefine y (yank) in Normal mode, so that the cursor does not move.
+" (By default, the cursor moves to the start of the selection.)
+" This version of GetMotion() is usable, but not complete.
+" One disadvantage is that the command is not shown as you type, even if you
+" have the 'showcmd' option set.
+" TODO:  How can we capture an optional register?
+
+fun! Yank()
+  let startpos = Mark()
+  execute "norm! y" . GetMotion("y")
+  execute startpos
+endfun
+
+" Get a sequence of characters that describe a motion.
+fun! GetMotion(char)
+  let motion = ""
+  let c = Getchar()
+  " In some contexts, such as "yy", a particular character counts as a motion.
+  if c == a:char
+    return c
+  endif
+  " Capture any sequence of digits (a count) and mode modifiers.
+  " :help o_v
+  while c =~ "[vV[:digit:]\<C-V>]"
+    let motion = motion . c
+    let c = Getchar()
+  endwhile
+  " Most motions are a single character, but some two-character motions start
+  " with 'g'.  For example,
+  " :help gj
+  if c == "g"
+    let motion = motion . c
+    let c = Getchar()
+  endif
+  " Text objects start with 'a' or 'i'.  :help text-objects
+  " Jump to a mark with "'" or "`".  :help 'a
+  if c =~ "[ai'`]"
+    let motion = motion . c
+    let c = Getchar()
+  endif
+  return motion . c
+endfun
+
+" Return the common initial part of two strings.
+fun! Common(str1, str2)
+  " Thanks to Peppe Guldberg, who noticed that we get an infinite loop if we
+  " omit this test.  If  n  is too big then a:str1[n] is the empty string...
+  if a:str1 == a:str2
+    return a:str1
+  endif
+  let n = 0
+  while a:str1[n] == a:str2[n]
+    let n = n+1
+  endwhile
+  return strpart(a:str1, 0, n)
+endfun
+
+:inoremap <F4> <C-O>:call TWIN()<CR>
+fun! TWIN()
+  let str = "I hear that the weather is nice in "
+  let str = str . input("Where do you want to go today?  ")
+  let str = str . " this time of year."
+  call append(".", str)
+  +normal! gqq$
+endfun
