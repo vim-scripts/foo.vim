@@ -2,7 +2,7 @@
 " vim:sts=2:sw=2:ff=unix:
 " FILE: "D:\vim\foo.vim"
 " URL:  http://www.vim.org/script.php?script_id=72
-" LAST MODIFICATION: "Fri, 15 Nov 2002 14:50:55 Eastern Standard Time ()"
+" LAST MODIFICATION: "Tue, 19 Nov 2002 06:54:29 Eastern Standard Time ()"
 " (C) 2000, 2001, 2002 by Benji Fisher, <benji@member.AMS.org>
 
 " This file contains relatively short functions and a few commands and
@@ -716,16 +716,15 @@ fun! GetMotion(char)
 endfun
 
 " Return the common initial part of two strings.
+" Just change the return statement for a Strcmp() function.
 fun! Common(str1, str2)
+  let n = 0
   " Thanks to Peppe Guldberg, who noticed that we get an infinite loop if we
   " omit this test.  If  n  is too big then a:str1[n] is the empty string...
-  if a:str1 == a:str2
-    return a:str1
-  endif
-  let n = 0
-  while a:str1[n] == a:str2[n]
+  while n < strlen(a:str1) && a:str1[n] == a:str2[n]
     let n = n+1
   endwhile
+  " return char2nr(a:str1[n]) - char2nr(a:str2[n])  " for Strcmp()
   return strpart(a:str1, 0, n)
 endfun
 
@@ -757,7 +756,7 @@ endif
 fun! SetPersistentNumber(name, value)
   " Search, from end of file, for "let name = ..."
   $
-  if !search('^\s*let\s\+s:' . a:name . '\s\+=', 'bW')
+  if !search('^\s*let\s\+s:' . a:name . '\s*=', 'bW')
     return 1
   endif
   execute 's/=.*/=' a:value
@@ -765,7 +764,7 @@ endfun
 fun! SetPersistentString(name, value)
   " Search, from end of file, for "let name = ..."
   $
-  if !search('^\s*let\s\+s:' . a:name . '\s\+=', 'bW')
+  if !search('^\s*let\s\+s:' . a:name . '\s*=', 'bW')
     return 1
   endif
   let newline = matchstr(getline("."), '.\{-}=\s*')
@@ -776,6 +775,8 @@ endfun
 " Example:  the full path of this file and the number of times it has been
 " sourced.
 let s:fooFile = expand("<sfile>:p")
+let s:fullPath = 'D:\vim\foo.vim'
+let s:sourceCount = 17
 if filewritable(s:fooFile)
   let s:filePosition = Mark()
   call SetPersistentString("fullPath", s:fooFile)
@@ -783,6 +784,4 @@ if filewritable(s:fooFile)
   update
   execute s:filePosition
 endif
-let s:fullPath = 'D:\vim\foo.vim'
-let s:sourceCount = 15
 
