@@ -2,7 +2,7 @@
 " vim:sts=2:sw=2:ff=unix:
 " FILE: "D:\vim\foo.vim"
 " URL:  http://www.vim.org/script.php?script_id=72
-" LAST MODIFICATION: "June 11, 2003"
+" LAST MODIFICATION: "June 27, 2003"
 " (C) 2000, 2001, 2002, 2003 by Benji Fisher, <benji@member.AMS.org>
 
 " This file contains relatively short functions and a few commands and
@@ -524,9 +524,9 @@ endfun
 
 " Make tab stops at columns 8, 17, 26, and 35.
 if strlen(g:fooVarTabChar)
-  execute "map" g:fooVarTabChar "<Plug>fooVarTab"
+  execute "imap" g:fooVarTabChar "<Plug>fooVarTab"
 elseif g:foo_DefineAllMaps && !hasmapto('<Plug>fooVarTab')
-  map <Tab> <Plug>fooVarTab
+  imap <Tab> <Plug>fooVarTab
 endif
 imap <Plug>fooVarTab <C-R>=VarTab(virtcol("."),8,17,26,35)<CR>
 fun! VarTab(c, ...)
@@ -757,6 +757,7 @@ endif
 
 " Use the current file to store persistent variables.  Return 1 if not found.
 " See example after the functions have been defined.
+" TODO:  Restore the search register.
 fun! SetPersistentNumber(name, value)
   " Search, from end of file, for "let name = ..."
   $
@@ -780,7 +781,7 @@ endfun
 " sourced.
 let s:fooFile = expand("<sfile>:p")
 let s:fullPath = '/home/benji/.vim/plugin/foo.vim'
-let s:sourceCount = 87
+let s:sourceCount = 92
 if filewritable(s:fooFile)
   let s:filePosition = Mark()
   call SetPersistentString("fullPath", s:fooFile)
