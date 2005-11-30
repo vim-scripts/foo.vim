@@ -2,8 +2,8 @@
 " vim:sts=2:sw=2:ff=unix:
 " FILE: "/home/benji/.vim/plugin/foo.vim"
 " URL:  http://www.vim.org/script.php?script_id=72
-" LAST MODIFICATION: "January 12, 2004"
-" (C) 2000, 2001, 2002, 2003 by Benji Fisher, <benji@member.AMS.org>
+" LAST MODIFICATION: "November 30, 2005"
+" (C) 2000-2005 by Benji Fisher, <benji@member.AMS.org>
 
 " This file contains relatively short functions and a few commands and
 " mappings for vim.  Many of these were written in response to questions
@@ -67,7 +67,7 @@
 "   Techniques:  :g, returning a value, :execute
 " fun! ShowHi()
 "   Purpose:  Show the colors of all highlight groups.
-"	Oops, we reinvented the wheel!  See $VIMRUNTIME/hitest.vim .
+"	Oops, we reinvented the wheel!  See $VIMRUNTIME/syntax/hitest.vim .
 "   Techniques:  saving and restoring an option, scratch buffer, :redir, etc.
 " fun! EditFun(name)
 "   Purpose:  Edit a vim function in a scratch buffer.
@@ -153,8 +153,8 @@
 " This vim plugin does many amazing and wondrous things, but you may prefer to
 " change some of the defaults.  Copy the following section to a file foo.vimrc
 " in your plugin directory, normally the same directory as this file.  If your
-" system administrator has installed this file, you should install foo.vim in
-" your after/plugin/ directory so that your choices override the system
+" system administrator has installed this file, you should install foo.vimrc
+" in your after/plugin/ directory so that your choices override the system
 " defaults.  See
 "   :help ftplugin-overrule
 "   :help 'runtimepath'
@@ -762,8 +762,8 @@ endfun
 " as far as I can tell.
 " TODO:  Save and restore the search history.
 if g:fooTextObjects || g:foo_DefineAllMaps
-  vmap i" ?"?e+1<CR>o/"/s-1<CR><Esc>:noh<CR>gv
-  vmap i' ?'?e+1<CR>o/'/s-1<CR><Esc>:noh<CR>gv
+  vmap i" ?"<CR>/.<CR>o/"<CR>?.<CR><Esc>:noh<CR>gv
+  vmap i' ?'<CR>/.<CR>o/'<CR>?.<CR><Esc>:noh<CR>gv
   vmap a" ?"<CR>o/"<CR><Esc>:noh<CR>gv
   vmap a' ?'<CR>o/'<CR><Esc>:noh<CR>gv
 endif
@@ -794,7 +794,7 @@ endfun
 " sourced.
 let s:fooFile = expand("<sfile>:p")
 let s:fullPath = '/home/benji/.vim/plugin/foo.vim'
-let s:sourceCount = 109
+let s:sourceCount = 0
 if filewritable(s:fooFile)
   let s:filePosition = Mark()
   call SetPersistentString("fullPath", s:fooFile)
